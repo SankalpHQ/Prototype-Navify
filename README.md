@@ -16,11 +16,13 @@ Navify is a smart transport tracking system prototype designed for local cities.
 ---
 
 
-![Home screen](./images/home.png)  
+![Home screen](Images/Home%20screen.png)  
 Home page UI of Navify prototype
 
-![Tracking Page](./images/tracking.png)  
+![Tracking](Images/Routes.png)  
 Transport tracking interface
+
+![RTA](Images/RTA.png)
 
 ---
 
@@ -31,5 +33,3 @@ Transport tracking interface
 - ⚡ Simple, fast, and lightweight  
 
 ---
-
-## 📂 Project Structure

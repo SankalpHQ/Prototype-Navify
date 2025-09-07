@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navify - Public Transport App Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --background: #0D111C;
+            --surface: #171C2A;
+            --primary: #2563EB;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --accent: #34D399;
+            --accent-glow: rgba(52, 211, 153, 0.4);
+            --text-primary: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --cyan-glow: #00FFFF;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            overscroll-behavior: none;
+        }
+
+        .glass-effect {
+            background: rgba(23, 28, 42, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .futuristic-glow-button {
+            box-shadow: 0 0 15px 2px var(--primary-glow), 0 0 20px 5px rgba(0, 255, 255, 0.2);
+        }
+        
+        .futuristic-glow-accent {
+            box-shadow: 0 0 15px 2px var(--accent-glow);
+        }
+        
+        .futuristic-glow-cyan {
+            box-shadow: 0 0 15px 2px rgba(0, 255, 255, 0.4), 0 0 20px 5px rgba(0, 255, 255, 0.2);
+        }
+
+        /* Page transition animations */
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+            pointer-events: none;
+            overflow-y: auto;
+            padding-bottom: 90px;
+        }
+
+        .page.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+        
+        /* Splash Screen Animation */
+        @keyframes splash-glow {
+            0%, 100% {
+                transform: scale(0.9);
+                filter: drop-shadow(0 0 10px var(--cyan-glow));
+            }
+            50% {
+                transform: scale(1.1);
+                filter: drop-shadow(0 0 30px var(--cyan-glow));
+            }
+        }
+        
+        .splash-logo {
+            animation: splash-glow 3s ease-in-out infinite;
+        }
+        
+        /* Bus animation on map */
+        @keyframes moveBus {
+            0% { offset-distance: 0%; }
+            100% { offset-distance: 100%; }
+        }
+        .bus-icon-animated {
+            position: absolute;
+            offset-path: path("M20,150 Q100,50 200,150 T380,150");
+            animation: moveBus 15s linear infinite;
+            filter: drop-shadow(0 0 8px var(--cyan-glow));
+        }
+
+        /* Pulsing dot for user location */
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 255, 255, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
+        }
+
+        .pulsing-dot {
+            animation: pulse 2s infinite;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: var(--accent);
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: var(--accent);
+        }
+    </style>
+</head>
+<body class="overflow-hidden">
+
+    <!-- App Container -->
+    <div class="relative w-full h-screen max-w-md mx-auto overflow-hidden">
+
+        <!-- Splash Screen -->
+        <div id="splash-screen" class="absolute inset-0 bg-background z-50 flex flex-col items-center justify-center transition-opacity duration-1000">
+            <div class="splash-logo w-32 h-32 flex items-center justify-center">
+                 <!-- Recreated Navify Logo SVG -->
+                <svg viewBox="0 0 100 100" class="w-24 h-24">
+                    <defs>
+                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#4F46E5; stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#00FFFF; stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 0 L95 25 L75 95 L25 95 L5 25 Z" fill="url(#logoGradient)"/>
+                    <circle cx="50" cy="50" r="15" fill="#0D111C" />
+                    <circle cx="50" cy="50" r="8" fill="url(#logoGradient)" />
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold mt-4 tracking-wider" style="color: var(--cyan-glow);">Navify</h1>
+            <p class="text-text-secondary mt-2">Seamlessly Navigate the Future of Transport.</p>
+        </div>
+        
+        <!-- Main Content -->
+        <div id="main-content" class="h-full opacity-0 transition-opacity duration-500">
+            
+            <!-- ====== HOME / MAP PAGE ====== -->
+            <div id="page-home" class="page active">
+                <div class="h-full w-full bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1594122479552-320924135805?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3');">
+                     <!-- Map background placeholder -->
+                    <div class="absolute inset-0 bg-black/60"></div>
+                     <!-- Live tracking elements will appear here when a route is active -->
+                    <div id="live-tracking-elements" class="absolute inset-0 hidden">
+                         <!-- The bus icon will be animated along this path -->
+                        <div class="bus-icon-animated w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--cyan-glow);">
+                           <i data-lucide="bus" class="text-background w-5 h-5"></i>
+                        </div>
+                        <div class="absolute top-[145px] left-[15px] w-4 h-4 rounded-full bg-white pulsing-dot"></div>
+                        <div class="absolute top-[145px] left-[375px] w-4 h-4 rounded-full bg-white">
+                           <i data-lucide="map-pin" class="text-red-500"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="absolute top-0 left-0 right-0 p-6 z-10">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-text-secondary text-sm">Welcome back,</p>
+                            <h1 class="text-2xl font-bold text-text-primary">Alex</h1>
+                        </div>
+                        <img src="https://placehold.co/40x40/34d399/0d111c?text=A" alt="User Avatar" class="w-10 h-10 rounded-full border-2 border-accent">
+                    </div>
+
+                    <div class="relative mt-6">
+                        <input id="search-input" type="text" placeholder="Where do you want to go?" class="w-full bg-surface/80 border border-white/10 rounded-full py-3 pl-12 pr-4 text-text-primary focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-300">
+                        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+                    </div>
+                </div>
+                
+                 <!-- Map Controls -->
+                <div class="absolute top-40 right-6 z-10 space-y-3">
+                    <button class="w-10 h-10 flex items-center justify-center rounded-full glass-effect"><i data-lucide="layers"></i></button>
+                    <button class="w-10 h-10 flex items-center justify-center rounded-full glass-effect"><i data-lucide="navigation"></i></button>
+                </div>
+
+                <!-- Bottom Sheet -->
+                <div id="home-bottom-sheet" class="absolute bottom-0 left-0 right-0 h-[45%] p-4 z-10 rounded-t-3xl glass-effect transition-transform duration-500 translate-y-24">
+                    <div class="w-12 h-1.5 bg-gray-600 rounded-full mx-auto mb-4 cursor-grab"></div>
+                    <div class="pb-20">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-semibold">Nearby Stops</h2>
+                            <a href="#" class="text-sm text-primary">View All</a>
+                        </div>
+                        <div class="flex space-x-4 overflow-x-auto mt-4 pb-4">
+                            <!-- Stop Cards -->
+                            <div class="flex-shrink-0 w-48 p-4 rounded-2xl bg-surface/80 border border-white/10">
+                                <h3 class="font-semibold">Central Station</h3>
+                                <p class="text-sm text-text-secondary mt-1">200m away</p>
+                                <div class="flex space-x-2 mt-3">
+                                    <span class="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">B7</span>
+                                    <span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">G2</span>
+                                    <span class="bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full">M1</span>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 w-48 p-4 rounded-2xl bg-surface/80 border border-white/10">
+                                <h3 class="font-semibold">Market Street</h3>
+                                <p class="text-sm text-text-secondary mt-1">450m away</p>
+                                <div class="flex space-x-2 mt-3">
+                                    <span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">R4</span>
+                                    <span class="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full">Y1</span>
+                                </div>
+                            </div>
+                        </div>
+
+                         <div class="mt-6">
+                            <h2 class="text-xl font-semibold">Favorite Routes</h2>
+                             <div class="mt-4 space-y-3">
+                                <div class="flex items-center justify-between p-3 rounded-xl bg-surface/80 border border-white/10">
+                                    <div class="flex items-center">
+                                       <div class="p-2 bg-primary/20 rounded-lg"><i data-lucide="home" class="text-primary"></i></div>
+                                       <span class="ml-4 font-medium">Home</span>
+                                    </div>
+                                    <p class="text-sm text-accent">12 min away</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Route Details Sheet (Hidden by default) -->
+                <div id="route-details-sheet" class="absolute bottom-0 left-0 right-0 h-[50%] p-4 z-20 rounded-t-3xl glass-effect transform translate-y-full transition-transform duration-500">
+                    <div id="close-route-details" class="w-12 h-1.5 bg-gray-600 rounded-full mx-auto mb-2 cursor-pointer"></div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">Route B7</h2>
+                        <div class="flex items-center space-x-2 text-sm">
+                            <i data-lucide="users" class="text-accent"></i>
+                            <span class="text-accent font-medium">Medium Traffic</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 overflow-y-auto h-[calc(100%-80px)]">
+                        <div class="flex items-center">
+                            <div class="text-center">
+                                <div class="w-4 h-4 rounded-full bg-cyan-400 futuristic-glow-cyan"></div>
+                                <div class="w-0.5 h-12 bg-cyan-400/50 mx-auto"></div>
+                            </div>
+                            <div class="ml-4">
+                                <p class="font-semibold">Your Location</p>
+                                <p class="text-sm text-text-secondary">Next bus in <span class="text-accent">3 min</span></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                             <div class="text-center">
+                                <div class="w-4 h-4 rounded-full border-2 border-cyan-400/50"></div>
+                                <div class="w-0.5 h-12 bg-cyan-400/50 mx-auto"></div>
+                            </div>
+                            <div class="ml-4">
+                                <p class="font-semibold">Central Station</p>
+                                <p class="text-sm text-text-secondary">ETA: 12:45 PM</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                             <div class="text-center">
+                                <div class="w-4 h-4 rounded-full border-2 border-cyan-400/50"></div>
+                            </div>
+                            <div class="ml-4">
+                                <p class="font-semibold text-text-secondary">University Campus</p>
+                                <p class="text-sm text-text-secondary">Final Destination</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== ROUTES PAGE ====== -->
+            <div id="page-routes" class="page p-6">
+                <h1 class="text-3xl font-bold">Plan a Journey</h1>
+                <div class="mt-6 p-4 bg-surface rounded-2xl space-y-4">
+                    <div>
+                        <label class="text-xs text-text-secondary">From</label>
+                        <input type="text" value="Current Location" class="w-full bg-transparent text-text-primary focus:outline-none">
+                    </div>
+                    <hr class="border-white/10">
+                    <div>
+                        <label class="text-xs text-text-secondary">To</label>
+                        <input type="text" placeholder="Search destination" class="w-full bg-transparent text-text-primary focus:outline-none placeholder:text-text-secondary">
+                    </div>
+                </div>
+                <button class="w-full mt-4 bg-primary futuristic-glow-button text-white font-bold py-3 rounded-xl">Find Routes</button>
+
+                <h2 class="text-2xl font-bold mt-8">Saved Routes</h2>
+                <div class="mt-4 space-y-3">
+                     <div class="flex items-center justify-between p-3 rounded-xl bg-surface">
+                        <div class="flex items-center">
+                           <div class="p-2 bg-primary/20 rounded-lg"><i data-lucide="home" class="text-primary"></i></div>
+                           <div class="ml-4">
+                               <p class="font-medium">Home</p>
+                               <p class="text-xs text-text-secondary">via Route B7</p>
+                           </div>
+                        </div>
+                        <i data-lucide="chevron-right"></i>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface">
+                        <div class="flex items-center">
+                           <div class="p-2 bg-accent/20 rounded-lg"><i data-lucide="briefcase" class="text-accent"></i></div>
+                           <div class="ml-4">
+                               <p class="font-medium">Work</p>
+                               <p class="text-xs text-text-secondary">via Metro Line 2</p>
+                           </div>
+                        </div>
+                        <i data-lucide="chevron-right"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== ALERTS PAGE ====== -->
+            <div id="page-alerts" class="page p-6">
+                <h1 class="text-3xl font-bold">Real-time Alerts</h1>
+                <p class="text-text-secondary mt-1">Stay updated on your journey.</p>
+                
+                <button class="w-full mt-6 bg-accent text-background font-bold py-3 rounded-xl futuristic-glow-accent flex items-center justify-center space-x-2">
+                    <i data-lucide="plus-circle"></i>
+                    <span>Create New Alert</span>
+                </button>
+
+                <h2 class="text-2xl font-bold mt-8">Active Alerts</h2>
+                <div class="mt-4 space-y-4">
+                    <div class="p-4 bg-surface rounded-2xl">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">Arrival: Home</p>
+                                <p class="text-sm text-text-secondary">Notify 10 mins before Bus B7 arrives.</p>
+                            </div>
+                            <div class="relative w-12 h-6 flex items-center bg-gray-600 rounded-full">
+                                <input type="checkbox" id="toggle1" class="absolute w-full h-full opacity-0 z-10 cursor-pointer toggle-checkbox" checked>
+                                <label for="toggle1" class="toggle-label block w-12 h-6 overflow-hidden rounded-full bg-gray-600 cursor-pointer"></label>
+                                <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 transform"></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="p-4 bg-surface rounded-2xl">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">Delay: Work</p>
+                                <p class="text-sm text-text-secondary">Notify if Metro Line 2 is delayed > 5 mins.</p>
+                            </div>
+                            <div class="relative w-12 h-6 flex items-center bg-gray-600 rounded-full">
+                                <input type="checkbox" id="toggle2" class="absolute w-full h-full opacity-0 z-10 cursor-pointer toggle-checkbox" checked>
+                                <label for="toggle2" class="toggle-label block w-12 h-6 overflow-hidden rounded-full bg-gray-600 cursor-pointer"></label>
+                                <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 transform"></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="p-4 bg-surface rounded-2xl opacity-60">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">Crowd: Central Station</p>
+                                <p class="text-sm text-text-secondary">Notify if station is crowded (Inactive).</p>
+                            </div>
+                            <div class="relative w-12 h-6 flex items-center bg-gray-600 rounded-full">
+                                <input type="checkbox" id="toggle3" class="absolute w-full h-full opacity-0 z-10 cursor-pointer toggle-checkbox">
+                                <label for="toggle3" class="toggle-label block w-12 h-6 overflow-hidden rounded-full bg-gray-600 cursor-pointer"></label>
+                                <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 transform"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== MORE (PROFILE) PAGE ====== -->
+            <div id="page-more" class="page p-6">
+                 <h1 class="text-3xl font-bold">More</h1>
+                 <div class="mt-8 space-y-4">
+                     <a href="#" class="flex items-center p-4 bg-surface rounded-2xl">
+                         <i data-lucide="user-circle" class="text-cyan-400"></i>
+                         <span class="ml-4 font-medium">Profile Settings</span>
+                     </a>
+                      <a href="#" class="flex items-center p-4 bg-surface rounded-2xl">
+                         <i data-lucide="wallet" class="text-cyan-400"></i>
+                         <span class="ml-4 font-medium">Payment Methods</span>
+                     </a>
+                      <a href="#" class="flex items-center p-4 bg-surface rounded-2xl">
+                         <i data-lucide="bell" class="text-cyan-400"></i>
+                         <span class="ml-4 font-medium">Notifications</span>
+                     </a>
+                      <a href="#" class="flex items-center p-4 bg-surface rounded-2xl">
+                         <i data-lucide="history" class="text-cyan-400"></i>
+                         <span class="ml-4 font-medium">Ride History</span>
+                     </a>
+                      <a href="#" class="flex items-center p-4 bg-surface rounded-2xl">
+                         <i data-lucide="settings" class="text-cyan-400"></i>
+                         <span class="ml-4 font-medium">App Settings</span>
+                     </a>
+                     <a href="#" class="flex items-center p-4 bg-surface rounded-2xl mt-8">
+                         <i data-lucide="log-out" class="text-red-400"></i>
+                         <span class="ml-4 font-medium text-red-400">Logout</span>
+                     </a>
+                 </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] z-30">
+                <div class="flex justify-around items-center h-20 rounded-full glass-effect">
+                    <button class="nav-btn p-3" data-page="home">
+                        <i data-lucide="map" class="nav-icon text-cyan-400"></i>
+                    </button>
+                    <button class="nav-btn p-3" data-page="routes">
+                        <i data-lucide="route" class="nav-icon text-text-secondary"></i>
+                    </button>
+                    <button class="nav-btn p-3" data-page="alerts">
+                        <i data-lucide="bell" class="nav-icon text-text-secondary"></i>
+                    </button>
+                    <button class="nav-btn p-3" data-page="more">
+                        <i data-lucide="grid-3x3" class="nav-icon text-text-secondary"></i>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const splashScreen = document.getElementById('splash-screen');
+            const mainContent = document.getElementById('main-content');
+            
+            // --- Splash Screen Logic ---
+            setTimeout(() => {
+                splashScreen.style.opacity = '0';
+                splashScreen.style.pointerEvents = 'none';
+                mainContent.style.opacity = '1';
+            }, 3000);
+
+            // --- Page Navigation Logic ---
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const pages = document.querySelectorAll('.page');
+            const navIcons = document.querySelectorAll('.nav-icon');
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const pageId = `page-${button.dataset.page}`;
+
+                    pages.forEach(page => page.classList.remove('active'));
+                    navIcons.forEach(icon => icon.classList.replace('text-cyan-400', 'text-text-secondary'));
+
+                    document.getElementById(pageId).classList.add('active');
+                    button.querySelector('.nav-icon').classList.replace('text-text-secondary', 'text-cyan-400');
+                });
+            });
+
+            // --- Home Screen Interactivity ---
+            const homeBottomSheet = document.getElementById('home-bottom-sheet');
+            const routeDetailsSheet = document.getElementById('route-details-sheet');
+            const searchInput = document.getElementById('search-input');
+            const liveTrackingElements = document.getElementById('live-tracking-elements');
+            const closeRouteDetailsBtn = document.getElementById('close-route-details');
+
+            let isSheetOpen = false;
+            homeBottomSheet.addEventListener('click', (e) => {
+                if (e.target.closest('a, button')) return;
+                isSheetOpen = !isSheetOpen;
+                homeBottomSheet.style.transform = isSheetOpen ? `translateY(0)` : `translateY(6rem)`;
+            });
+            
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && searchInput.value.trim() !== '') {
+                    homeBottomSheet.style.transform = `translateY(100%)`;
+                    routeDetailsSheet.style.transform = `translateY(0)`;
+                    liveTrackingElements.classList.remove('hidden');
+                    searchInput.blur();
+                }
+            });
+
+            closeRouteDetailsBtn.addEventListener('click', () => {
+                routeDetailsSheet.style.transform = `translateY(100%)`;
+                homeBottomSheet.style.transform = `translateY(6rem)`;
+                liveTrackingElements.classList.add('hidden');
+                isSheetOpen = false;
+            });
+
+            // --- Alert Toggles ---
+            const toggles = document.querySelectorAll('.toggle-checkbox');
+            toggles.forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    const parentCard = e.target.closest('.p-4');
+                    if (e.target.checked) {
+                        parentCard.classList.remove('opacity-60');
+                    } else {
+                        parentCard.classList.add('opacity-60');
+                    }
+                });
+                // Initialize based on checked status
+                const parentCard = toggle.closest('.p-4');
+                 if (!toggle.checked) {
+                    parentCard.classList.add('opacity-60');
+                }
+            });
+
+
+            // Initialize Lucide Icons
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
+
